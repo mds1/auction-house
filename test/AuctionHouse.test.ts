@@ -348,7 +348,7 @@ describe("AuctionHouse", () => {
     it("should revert if not called by the curator or owner", async () => {
       await expect(
         auctionHouse.connect(admin).setAuctionReservePrice(0, TWO_ETH)
-      ).eventually.rejectedWith(revert`Must be auction curator`);
+      ).eventually.rejectedWith(revert`Must be auction curator or token owner`);
     });
 
     it("should revert if the auction has already started", async () => {

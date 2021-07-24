@@ -85,4 +85,4 @@ export const approveAuction = async (
 };
 
 export const revert = (messages: TemplateStringsArray) =>
-  `VM Exception while processing transaction: revert ${messages[0]}`;
+  `VM Exception while processing transaction: reverted with reason string '${messages[0]}'`;
