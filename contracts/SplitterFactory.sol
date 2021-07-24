@@ -11,21 +11,21 @@ contract SplitterFactory {
   address public immutable implementation;
 
   /// @notice Emitted when a new Splitter is created
-  event SplitterCreated(address splitter);
+  event SplitterCreated(address splitter, bytes32 merkleRoot, address token);
 
   constructor(address _implementation) public {
     implementation = _implementation;
   }
 
-  function createSplitter(bytes32 _merkleRoot) external returns (address) {
+  function createSplitter(bytes32 _merkleRoot, address _token) external returns (address) {
     // Deploy new splitter instance as an EIP-1167 minimal proxy, using CREATE2 for deterministic addresses
-    address _splitter = implementation.cloneDeterministic(_merkleRoot);
+    address _splitter = implementation.cloneDeterministic(_merkleRoot); // salt is merkleRoot -- can't have two splitter's with exact same distribution
 
     // Initalize the splitter (constructors are not run for minimal proxies, so we use an initialize method)
-    Splitter(_splitter).initialize(_merkleRoot);
+    Splitter(_splitter).initialize(_merkleRoot, _token);
 
     // Emit event with splitter address and return the address
-    emit SplitterCreated(_splitter);
+    emit SplitterCreated(_splitter, _merkleRoot, _token);
     return _splitter;
   }
 
