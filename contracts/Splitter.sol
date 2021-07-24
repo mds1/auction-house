@@ -11,6 +11,7 @@ contract Splitter {
   using SafeERC20 for IERC20;
 
   bytes32 public merkleRoot;
+  address public owner;
   IERC20 public token; // token this contract will track claims for
   uint256 public denominator = 1e6;
   
@@ -19,12 +20,19 @@ contract Splitter {
 
   event Claimed(address account, uint256 amount);
 
-  function initialize(bytes32 _merkleRoot, address _token) external {
-    require(address(token) == address(0), "Already initialized");
-    token = IERC20(_token);
-    merkleRoot = _merkleRoot;
+  modifier onlyOwner() {
+    require(msg.sender == owner, "Not authorized");
+    _;
   }
 
+  function initialize(bytes32 _merkleRoot, address _token, address _owner) external {
+    require(address(token) == address(0), "Already initialized");
+    merkleRoot = _merkleRoot;
+    token = IERC20(_token);
+    owner = _owner;
+  }
+
+  // --- Claim funds ---
   function claim(address _account, uint256 _percent, bytes32[] calldata _merkleProof) external {
     // Revert if already claimed
     require(!isClaimed(_account), 'Already claimed');
@@ -40,7 +48,10 @@ contract Splitter {
     emit Claimed(_account, _amount);
   }
 
-  // --- Claim management ---
+  // --- Auction management ---
+  // TODO
+
+  // --- Claim heplers ---
   function _getClaimId(address _account) internal pure returns (bytes32) {
     return keccak256(abi.encodePacked(_account));
   }
