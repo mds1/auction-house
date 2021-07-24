@@ -1,7 +1,10 @@
 import { ethers } from "hardhat";
+import { BigNumberish } from "ethers";
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import chai, { expect } from "chai";
 import asPromised from "chai-as-promised";
 import { SplitterFactory, Splitter } from "../typechain";
+import { SplitTree } from "../utils/split-tree";
 
 chai.use(asPromised);
 const { isAddress, hexlify, hexZeroPad, randomBytes } = ethers.utils;
@@ -66,21 +69,57 @@ describe("SplitterFactory", () => {
 
 describe('Splitter', () => {
   let splitter: Splitter;
+  let users: SignerWithAddress[];
+  let tree: SplitTree;
+  let merkleRoot: string;
+  let allocations: {account:string; percent: BigNumberish}[];
 
   beforeEach(async () => {
     await ethers.provider.send("hardhat_reset", []);
-    // Deploy and initialize Splitter
-    splitter = (await (await ethers.getContractFactory("Splitter")).deploy()) as Splitter;
-    await splitter.initialize(dummyMerkleRoot);
+    users = await ethers.getSigners();
+
+    // Get Merkle root
+    allocations = [{account: users[0].address, percent: '1000000'}];
+    tree = new SplitTree(allocations);
+    merkleRoot = tree.getHexRoot();
+
+    // Deploy and initialize Splitter from factory
+    const splitterImplementation = (await (await ethers.getContractFactory("Splitter")).deploy()) as Splitter;
+    await splitterImplementation.initialize(dummyMerkleRoot);
+    const addr = splitterImplementation.address;
+    const splitterFactory= (await (await ethers.getContractFactory("SplitterFactory")).deploy(addr)) as SplitterFactory;
+    await splitterFactory.createSplitter(merkleRoot);
+    splitter = await ethers.getContractAt('Splitter', await splitterFactory.getSplitterAddress(merkleRoot)) as Splitter;
   });
 
   describe("#initialize", () => {
     it('should initialize', async () => {
-      expect(await splitter.merkleRoot()).to.equal(dummyMerkleRoot);
+      expect(await splitter.merkleRoot()).to.equal(merkleRoot);
     });
     
     it('should not allow re-initialization', async () => {
-      await expect(splitter.initialize(dummyMerkleRoot)).to.be.revertedWith('Already initialized');
+      await expect(splitter.initialize(merkleRoot)).to.be.revertedWith('Already initialized');
+    });
+  });
+
+  describe("#claim", () => {
+    it('should allow users to claim', async () => {
+      const { account, percent } = allocations[0]
+      const proof = tree.getProof(account, percent);
+      await splitter.claim(account, percent, proof);
+    });
+    
+    it('should reject if already claimed', async () => {
+      const { account, percent } = allocations[0]
+      const proof = tree.getProof(account, percent);
+      await splitter.claim(account, percent, proof);
+      await expect(splitter.claim(account, percent, proof)).to.be.revertedWith('Already claimed');
+    });
+
+    it('should reject claims with invalid proofs', async () => {
+      const { account, percent } = allocations[0]
+      const proof = tree.getProof(account, percent);
+      await expect(splitter.claim(account, '1', proof)).to.be.revertedWith('Invalid proof');
     });
   });
 })
