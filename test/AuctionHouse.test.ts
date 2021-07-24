@@ -1,6 +1,5 @@
 import chai, { expect } from "chai";
 import asPromised from "chai-as-promised";
-// @ts-ignore
 import { ethers } from "hardhat";
 import { Market, Media } from "@zoralabs/core/dist/typechain";
 import { AuctionHouse, BadBidder, TestERC721, BadERC721 } from "../typechain";
