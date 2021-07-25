@@ -90,6 +90,7 @@ describe('Splitter', () => {
     const amount = parseEther('1');
     await accounts[accounts.length-1].sendTransaction({ to: splitter.address, value: amount });
     await network.provider.send('hardhat_setStorageAt', [splitter.address, '0x5', to32ByteHex(amount)]);
+    return amount;
   }
 
   beforeEach(async () => {
@@ -97,7 +98,14 @@ describe('Splitter', () => {
     [owner, ...accounts] = await ethers.getSigners();
 
     // Get Merkle root
-    allocations = [{account: accounts[0].address, percent: '1000000'}];
+    allocations = [ 
+      { account: accounts[0].address, percent: '500' }, // 0.05%
+      { account: accounts[1].address, percent: '10000' }, // 1%
+      { account: accounts[2].address, percent: '25000' }, // 2.5%
+      { account: accounts[3].address, percent: '127500' }, // 12.75%
+      { account: accounts[4].address, percent: '327000' }, // 32.7%
+      { account: accounts[5].address, percent: '510000' }, // 51%
+    ];
     tree = new SplitTree(allocations);
     merkleRoot = tree.getHexRoot();
 
@@ -123,11 +131,24 @@ describe('Splitter', () => {
   });
 
   describe("#claim", () => {
+    async function getBalance(account: string, token: string) {
+      if (token === AddressEth) return ethers.provider.getBalance(account);
+      const contract = new ethers.Contract(token, ['function balanceOf(address) returns (uint256)']);
+      return (await contract.balanceOf(account)) as BigNumber;
+    }
+
     it('should allow users to claim', async () => {
-      await fundSplitter();
-      const { account, percent } = allocations[0]
-      const proof = tree.getProof(account, percent);
-      await splitter.claim(account, percent, proof);
+      const auctionProceeds = await fundSplitter();
+      const denominator = await splitter.denominator();
+
+      for (const allocation of allocations) {
+        const { account, percent } = allocation;
+        const initialBalance = await getBalance(account, AddressEth);
+        const delta = auctionProceeds.mul(percent).div(denominator)
+        const proof = tree.getProof(account, percent);
+        await splitter.claim(account, percent, proof);
+        expect(await getBalance(account, AddressEth)).to.equal(initialBalance.add(delta));
+      }
     });
 
     it('should reject if already claimed', async () => {
