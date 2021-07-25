@@ -60,11 +60,12 @@ contract Splitter {
   }
 
   // --- Initialization for minimal proxy ---
-  function initialize(bytes32 _merkleRoot, address _auctionCurrency, address _owner) external {
+  function initialize(bytes32 _merkleRoot, address _auctionCurrency, address _owner, address _auctionHouse) external {
     require(auctionCurrency == address(0), "Already initialized");
     merkleRoot = _merkleRoot;
     auctionCurrency = _auctionCurrency;
     owner = _owner;
+    auctionHouse = IAuctionHouse(_auctionHouse);
   }
 
   // --- Claim funds ---

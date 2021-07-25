@@ -62,16 +62,19 @@ export const deploySplitter = async ({
   merkleRoot,
   auctionCurrency,
   owner,
+  auctionHouse
 }: {
   factory?: SplitterFactory;
   merkleRoot?: string;
   auctionCurrency?: string;
   owner?: string;
+  auctionHouse?: string;
 }) => {
   // Set defaults for Splitter
   merkleRoot = merkleRoot || hexlify(randomBytes(32)); // random 32 byte merkle root if not provided
   auctionCurrency = auctionCurrency || AddressEth; // use ETH if not specified
   owner = owner || AddressZero; // set owner to zero address if not provided
+  auctionHouse = auctionHouse || AddressZero; // set auctionHouse to zero address if not provided
 
   // Deploy factory if required
   if (!factory) {
@@ -80,7 +83,7 @@ export const deploySplitter = async ({
     
     // Initialize implementation with dummy data
     // WARNING: Make sure token address is not all zeros, as all zeroes indicates an uninitialized Splitter
-    await implementation.initialize(merkleRootZero, AddressOne, AddressZero);
+    await implementation.initialize(merkleRootZero, AddressOne, AddressZero, AddressZero);
     
     // Deploy SplitterFactory
     const addr = implementation.address;

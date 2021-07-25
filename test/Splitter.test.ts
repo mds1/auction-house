@@ -21,15 +21,15 @@ describe("SplitterFactory", () => {
     [owner] = await ethers.getSigners();
 
     // Deploy Splitter implementation used by factory
-    splitterImplementation= (await (await ethers.getContractFactory("Splitter")).deploy()) as Splitter;
+    splitterImplementation = (await (await ethers.getContractFactory("Splitter")).deploy()) as Splitter;
 
     // Initialize implementation with dummy data
     // WARNING: Make sure token address is not all zeros, as all zeroes indicates an uninitialized Splitter
-    await splitterImplementation.initialize(merkleRootZero, AddressOne, AddressZero);
+    await splitterImplementation.initialize(merkleRootZero, AddressOne, AddressZero, AddressZero);
 
     // Deploy SplitterFactory
     const implementation = splitterImplementation.address;
-    factory = (await (await ethers.getContractFactory("SplitterFactory")).deploy(implementation)) as SplitterFactory;
+    factory = (await (await ethers.getContractFactory("SplitterFactory")).deploy(implementation, AddressZero)) as SplitterFactory;
   });
 
   describe("#constructor", () => {
@@ -92,9 +92,9 @@ describe('Splitter', () => {
 
     // Deploy and initialize Splitter from factory
     const splitterImplementation = (await (await ethers.getContractFactory("Splitter")).deploy()) as Splitter;
-    await splitterImplementation.initialize(merkleRootZero, AddressOne, AddressZero);
-    const addr = splitterImplementation.address;
-    const factory= (await (await ethers.getContractFactory("SplitterFactory")).deploy(addr)) as SplitterFactory;
+    await splitterImplementation.initialize(merkleRootZero, AddressOne, AddressZero, AddressZero);
+    const implementation = splitterImplementation.address;
+    const factory= (await (await ethers.getContractFactory("SplitterFactory")).deploy(implementation, AddressZero)) as SplitterFactory;
     await factory.createSplitter(merkleRoot, AddressEth, owner.address);
     const splitterAddress = await factory.getSplitterAddress(merkleRoot);
     splitter = await ethers.getContractAt('Splitter', splitterAddress) as Splitter;
@@ -106,8 +106,8 @@ describe('Splitter', () => {
     });
     
     it('should not allow re-initialization', async () => {
-      await expect(splitter.initialize(merkleRoot, AddressEth, owner.address)).to.be.revertedWith('Already initialized');
-      await expect(splitter.initialize(merkleRootZero, AddressZero, AddressZero)).to.be.revertedWith('Already initialized');
+      await expect(splitter.initialize(merkleRoot, AddressEth, owner.address, AddressZero)).to.be.revertedWith('Already initialized');
+      await expect(splitter.initialize(merkleRootZero, AddressZero, AddressZero, AddressZero)).to.be.revertedWith('Already initialized');
     });
   });
 
