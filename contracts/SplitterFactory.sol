@@ -22,7 +22,7 @@ contract SplitterFactory {
     address _splitter = implementation.cloneDeterministic(_merkleRoot); // salt is merkleRoot -- can't have two splitter's with exact same distribution
 
     // Initalize the splitter (constructors are not run for minimal proxies, so we use an initialize method)
-    Splitter(_splitter).initialize(_merkleRoot, _token, _owner);
+    Splitter(payable(_splitter)).initialize(_merkleRoot, _token, _owner);
 
     // Emit event with splitter address and return the address
     emit SplitterCreated(_splitter, _merkleRoot, _token, _owner);
