@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.8;
 
-import { Clones } from "@openzeppelin/contracts/proxy/Clones.sol";
-import { Splitter } from "./Splitter.sol";
+import "@openzeppelin/contracts/proxy/Clones.sol";
+import "./Splitter.sol";
 
 contract SplitterFactory {
   using Clones for address;

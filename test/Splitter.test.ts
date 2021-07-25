@@ -5,7 +5,7 @@ import chai, { expect } from "chai";
 import asPromised from "chai-as-promised";
 import { SplitterFactory, Splitter } from "../typechain";
 import { SplitTree } from "../utils/split-tree";
-import { AddressZero, AddressOne, AddressEth, merkleRootZero, deploySplitter } from "./utils";
+import { AddressZero, AddressOne, AddressEth, merkleRootOne, deploySplitter } from "./utils";
 
 chai.use(asPromised);
 const { isAddress, hexZeroPad, parseEther } = ethers.utils;
@@ -24,8 +24,8 @@ describe("SplitterFactory", () => {
     splitterImplementation = (await (await ethers.getContractFactory("Splitter")).deploy()) as Splitter;
 
     // Initialize implementation with dummy data
-    // WARNING: Make sure token address is not all zeros, as all zeroes indicates an uninitialized Splitter
-    await splitterImplementation.initialize(merkleRootZero, AddressOne, AddressZero, AddressZero);
+    // WARNING: Make sure merkleRoot is not all zeros, as all zeroes indicates an uninitialized Splitter
+    await splitterImplementation.initialize(merkleRootOne, AddressOne, AddressZero, AddressZero);
 
     // Deploy SplitterFactory
     const implementation = splitterImplementation.address;
@@ -92,7 +92,7 @@ describe('Splitter', () => {
 
     // Deploy and initialize Splitter from factory
     const splitterImplementation = (await (await ethers.getContractFactory("Splitter")).deploy()) as Splitter;
-    await splitterImplementation.initialize(merkleRootZero, AddressOne, AddressZero, AddressZero);
+    await splitterImplementation.initialize(merkleRootOne, AddressOne, AddressZero, AddressZero);
     const implementation = splitterImplementation.address;
     const factory= (await (await ethers.getContractFactory("SplitterFactory")).deploy(implementation, AddressZero)) as SplitterFactory;
     await factory.createSplitter(merkleRoot, AddressEth, owner.address);
@@ -107,7 +107,7 @@ describe('Splitter', () => {
     
     it('should not allow re-initialization', async () => {
       await expect(splitter.initialize(merkleRoot, AddressEth, owner.address, AddressZero)).to.be.revertedWith('Already initialized');
-      await expect(splitter.initialize(merkleRootZero, AddressZero, AddressZero, AddressZero)).to.be.revertedWith('Already initialized');
+      await expect(splitter.initialize(merkleRootOne, AddressZero, AddressZero, AddressZero)).to.be.revertedWith('Already initialized');
     });
   });
 

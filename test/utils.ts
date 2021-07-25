@@ -21,8 +21,8 @@ const { hexlify, hexZeroPad, randomBytes } = ethers.utils;
 
 export const { AddressZero } = ethers.constants;
 export const AddressOne = '0x0000000000000000000000000000000000000001';
-export const AddressEth = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
-export const merkleRootZero = hexZeroPad('0x0', 32); // 32 bytes of zeros
+export const AddressEth = AddressZero;
+export const merkleRootOne = hexZeroPad('0x1', 32); // 0x0000....00001
 export const THOUSANDTH_ETH = ethers.utils.parseUnits(
   "0.001",
   "ether"
@@ -80,14 +80,14 @@ export const deploySplitter = async ({
   if (!factory) {
     // Deploy Splitter implementation
     const implementation = (await (await ethers.getContractFactory("Splitter")).deploy()) as Splitter;
-    
+
     // Initialize implementation with dummy data
     // WARNING: Make sure token address is not all zeros, as all zeroes indicates an uninitialized Splitter
-    await implementation.initialize(merkleRootZero, AddressOne, AddressZero, AddressZero);
-    
+    await implementation.initialize(merkleRootOne, AddressOne, AddressZero, AddressZero);
+
     // Deploy SplitterFactory
     const addr = implementation.address;
-    factory = (await (await ethers.getContractFactory("SplitterFactory")).deploy(addr)) as SplitterFactory;
+    factory = (await (await ethers.getContractFactory("SplitterFactory")).deploy(addr, auctionHouse)) as SplitterFactory;
   }
 
   // Deploy splitter

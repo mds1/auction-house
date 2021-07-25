@@ -4,8 +4,9 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import { IAuctionHouse } from "./interfaces/IAuctionHouse.sol";
+import "./interfaces/IAuctionHouse.sol";
 
 contract Splitter {
   // --- Libraries ---
@@ -23,7 +24,7 @@ contract Splitter {
   address public auctionCurrency;
 
   /// @notice If `auctionCurrency` is this address, we are using ETH, otherwise it's an ERC20
-  address constant internal ETH_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+  address constant internal ETH_ADDRESS = address(0);
 
   /// @notice Address of the Zora auction house
   IAuctionHouse public auctionHouse;
@@ -61,7 +62,7 @@ contract Splitter {
 
   // --- Initialization for minimal proxy ---
   function initialize(bytes32 _merkleRoot, address _auctionCurrency, address _owner, address _auctionHouse) external {
-    require(auctionCurrency == address(0), "Already initialized");
+    require(merkleRoot == bytes32(0), "Already initialized");
     merkleRoot = _merkleRoot;
     auctionCurrency = _auctionCurrency;
     owner = _owner;
@@ -106,8 +107,10 @@ contract Splitter {
   }
 
   // --- Auction management ---
+  // To create an auction, the Splitter must own the NFT
   function createAuction(uint256 _tokenId, address _tokenContract, uint256 _duration, uint256 _reservePrice, address payable _curator, uint8 _curatorFeePercentages) external onlyOwner returns (uint256) {
     require(auctionId == 0, "An auction has already been created");
+    IERC721(_tokenContract).approve(address(auctionHouse), _tokenId);
     auctionId = auctionHouse.createAuction(_tokenId, _tokenContract, _duration, _reservePrice, _curator, _curatorFeePercentages, auctionCurrency);
     return auctionId;
   }
@@ -143,6 +146,11 @@ contract Splitter {
 
   receive() external payable {
     // For receiving ETH after auctions
+  }
+
+  // --- NFT management ---
+  function transferNft(address _to, uint256 _tokenId, address _tokenContract) external onlyOwner {
+    IERC721(_tokenContract).transferFrom(address(this), _to, _tokenId);
   }
 
   // --- Claim heplers ---

@@ -89,7 +89,7 @@ The claim methods take an `account`, `percent`, and `merkleProof` as inputs. It 
 
 > Allow for the splits contract to split both ETH and / or ERC20 tokens.
 
-When creating a new `Splitter`, you specify the `auctionCurrency` as an input. When set to `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE`, the `Splitter` knows that ETH is used as the auction current. For any other address an ERC20 token is assumed.
+When creating a new `Splitter`, you specify the `auctionCurrency` as an input. When set to the zero address, the `Splitter` knows that ETH is used as the auction current. For any other address an ERC20 token is assumed.
 
 > To simplify the scope of the contract, each split should only be used once, and for a specific auction.
 
@@ -138,7 +138,7 @@ const merkleRoot = tree.getHexRoot();
 
 // Define the Splitter's auction currency. We use the special address
 // below to specify ETH. Other addresses are ERC20 tokens
-const auctionCurrency = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+const auctionCurrency = ethers.utils.constants.AddressZero;
 
 // Define the Splitter's owner. The owner address is the only address
 // with the authority to call all auction related methods
