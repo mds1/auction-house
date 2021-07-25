@@ -5,35 +5,16 @@ import chai, { expect } from "chai";
 import asPromised from "chai-as-promised";
 import { SplitterFactory, Splitter } from "../typechain";
 import { SplitTree } from "../utils/split-tree";
-import { deployWETH } from "./utils";
+import { AddressZero, AddressOne, AddressEth, merkleRootZero, deploySplitter } from "./utils";
 
 chai.use(asPromised);
-const { isAddress, hexlify, hexZeroPad, randomBytes, parseEther } = ethers.utils;
-const { AddressZero } = ethers.constants;
-const AddressOne = '0x0000000000000000000000000000000000000001';
-const AddressEth = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
-const merkleRootZero = hexZeroPad('0x0', 32); // 32 bytes of zeros
+const { isAddress, hexZeroPad, parseEther } = ethers.utils;
 const to32ByteHex = (x: BigNumberish) => hexZeroPad(BigNumber.from(x).toHexString(), 32);
 
 describe("SplitterFactory", () => {
-  let splitterFactory: SplitterFactory;
+  let factory: SplitterFactory;
   let splitterImplementation: Splitter;
   let owner: SignerWithAddress;
-
-  async function deploySplitter() {
-    // Deploy splitter
-    const merkleRoot = hexlify(randomBytes(32)); // random 32 byte merkle root
-    const tx = await splitterFactory.createSplitter(merkleRoot, AddressEth, owner.address);
-
-    // Parse logs for the address of the new Splitter
-    const receipt = await ethers.provider.getTransactionReceipt(tx.hash);
-    const log = splitterFactory.interface.parseLog(receipt.logs[0]);
-    const { splitter: splitterAddress } = log.args;
-
-    // Verify Splitter was properly created
-    const splitter = await ethers.getContractAt('Splitter', splitterAddress) as Splitter;
-    return { merkleRoot, splitter, tx };
-  }
 
   beforeEach(async () => {
     await ethers.provider.send("hardhat_reset", []);
@@ -47,22 +28,22 @@ describe("SplitterFactory", () => {
     await splitterImplementation.initialize(merkleRootZero, AddressOne, AddressZero);
 
     // Deploy SplitterFactory
-    const addr = splitterImplementation.address;
-    splitterFactory= (await (await ethers.getContractFactory("SplitterFactory")).deploy(addr)) as SplitterFactory;
+    const implementation = splitterImplementation.address;
+    factory = (await (await ethers.getContractFactory("SplitterFactory")).deploy(implementation)) as SplitterFactory;
   });
 
   describe("#constructor", () => {
     it("should be able to deploy", async () => {
       expect(isAddress(splitterImplementation.address)).to.be.true;
-      expect(isAddress(splitterFactory.address)).to.be.true;
+      expect(isAddress(factory.address)).to.be.true;
     });
   });
 
   describe("#createSplitter", () => {
     it('should create a new splitter', async () => {
-      const { merkleRoot, splitter, tx } = await deploySplitter();
-      const expectedAddress = await splitterFactory.getSplitterAddress(merkleRoot);
-      expect(tx).to.emit(splitterFactory, 'SplitterCreated').withArgs(expectedAddress, merkleRoot, AddressEth, owner.address);
+      const { merkleRoot, splitter, tx } = await deploySplitter({ factory, owner: owner.address });
+      const expectedAddress = await factory.getSplitterAddress(merkleRoot);
+      expect(tx).to.emit(factory, 'SplitterCreated').withArgs(expectedAddress, merkleRoot, AddressEth, owner.address);
       expect(await splitter.merkleRoot()).to.equal(merkleRoot);
       expect(await splitter.auctionCurrency()).to.equal(AddressEth);
       expect(await splitter.owner()).to.equal(owner.address);
@@ -71,8 +52,8 @@ describe("SplitterFactory", () => {
 
   describe("#getSplitterAddress", () => {
     it('should compute and return the address of deployed splitters', async () => {
-      const { merkleRoot, splitter } = await deploySplitter();
-      expect(await splitterFactory.getSplitterAddress(merkleRoot)).to.equal(splitter.address)
+      const { merkleRoot, splitter } = await deploySplitter({ factory, owner: owner.address });
+      expect(await factory.getSplitterAddress(merkleRoot)).to.equal(splitter.address)
     });
   });
 });
@@ -113,9 +94,9 @@ describe('Splitter', () => {
     const splitterImplementation = (await (await ethers.getContractFactory("Splitter")).deploy()) as Splitter;
     await splitterImplementation.initialize(merkleRootZero, AddressOne, AddressZero);
     const addr = splitterImplementation.address;
-    const splitterFactory= (await (await ethers.getContractFactory("SplitterFactory")).deploy(addr)) as SplitterFactory;
-    await splitterFactory.createSplitter(merkleRoot, AddressEth, owner.address);
-    const splitterAddress = await splitterFactory.getSplitterAddress(merkleRoot);
+    const factory= (await (await ethers.getContractFactory("SplitterFactory")).deploy(addr)) as SplitterFactory;
+    await factory.createSplitter(merkleRoot, AddressEth, owner.address);
+    const splitterAddress = await factory.getSplitterAddress(merkleRoot);
     splitter = await ethers.getContractAt('Splitter', splitterAddress) as Splitter;
   });
 
