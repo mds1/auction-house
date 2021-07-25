@@ -22,15 +22,15 @@
 
 ## Overview
 
-This repository is a fork of the the [Zora Auction House](https://github.com/ourzora/auction-house) repo at commit [54a12ec](https://github.com/ourzora/auction-house/commit/54a12ec1a6cf562e49f0a4917990474b11350a2d), modified to add a `Splitter` contract based on the requirements defined [here](https://github.com/ourzora/auction-house/issues/5).
+This repository is a fork of the the [Zora Auction House](https://github.com/ourzora/auction-house) repo at commit [54a12ec](https://github.com/ourzora/auction-house/commit/54a12ec1a6cf562e49f0a4917990474b11350a2d), modified to add a `Splitter` contract based on the requirements defined in [ourzora/auction-house#5](https://github.com/ourzora/auction-house/issues/5).
 
-Anyone can deploy their own `Splitter` contract from the `SplitterFactory`, and use it to create an auction on Zora and split the auction proceeds in a predefined way where each account has a defined percentage of the proceeds it is entitled to.
+Anyone can deploy their own `Splitter` contract from the `SplitterFactory`. Once this contract owns an NFT, it can be used create an auction on Zora and split the auction proceeds in a predefined way, where each account has a defined percentage of the proceeds it is entitled to.
 
 ## Requirements
 
-The `SplitterFactory` and `Splitter` contract added to this repository satisfies each requirement from https://github.com/ourzora/auction-house/issues/5 as follows:
+The `SplitterFactory` and `Splitter` contract added to this repository satisfies each requirement from [ourzora/auction-house#5](https://github.com/ourzora/auction-house/issues/5) as follows:
 
-> Allow for a user to initiate a split contract that keeps track of a pool of ownership for a reasonable # of addresses without being too gas intensive. Use mirror implementation with Merkle proofs as inspiration (https://github.com/mirror-xyz/splits/blob/main/contracts/Splitter.sol)
+> Requirement: Allow for a user to initiate a split contract that keeps track of a pool of ownership for a reasonable # of addresses without being too gas intensive. Use mirror implementation with Merkle proofs as inspiration (https://github.com/mirror-xyz/splits/blob/main/contracts/Splitter.sol)
 
 Similar to Mirror's implementation, a new `Splitter` instance is defined by calling `SplitterFactory.createSplitter()` and passing it the Merkle root (along with other inputs discussed later). The Merkle root is generated from an array of objects of type `{account: string; percent: BigNumberish}[]`. An example of defining this array and using it to obtain the Merkle root can be found in the Splitter tests and is shown below for convenience:
 
@@ -52,29 +52,29 @@ tree = new SplitTree(allocations);
 merkleRoot = tree.getHexRoot();
 ```
 
-This allows a very large number of addresses to split allocations for a very affordable gas price. For a Splitter that uses ETH as it's `auctionCurrency`, the cost to claim your share of ETH with the `claim` method is about 70k gas (about $2 at current prices). This is true whether the splitter is configured for 2 addresses or 100 addresses. (Costs for tokens will be a bit higher, as token transfers are more expensive than ETH transfers).
+This allows a very large number of addresses to split allocations for a very affordable gas price. For a Splitter that uses ETH as it's `auctionCurrency`, the cost to claim your share of ETH with the `claim` method is about 70k gas (about $2 at current prices). This holds whether the splitter is configured for 2 addresses or 100 addresses. Costs for tokens will be a bit higher, as token transfers are more expensive than ETH transfers.
 
-Additionally, `Splitter` contracts are deployed as EIP-1167 minimal proxies to minimize deployment cost. The cost to deploy a new `Splitter` is 119k gas (about $4)
+Additionally, `Splitter` contracts are deployed as EIP-1167 minimal proxies to minimize deployment cost. The cost to deploy a new `Splitter` is ~119k gas (about $4)
 
-> Allow for the split contract to interact with Auction House to call functions such as createAuction, setAuctionReservePrice, and cancelAuction
+> Requirement: Allow for the split contract to interact with Auction House to call functions such as createAuction, setAuctionReservePrice, and cancelAuction
 
 The `Splitter` contract has various methods to allow interacting with the `AuctionHouse`. These methods have very similar function signatures to the `AuctionHouse` versions. Before creating an auction, the NFT to be auctioned must be transferred to the `Splitter`. This is required so the `Splitter` can grant approval to the `AuctionHouse`.
 
 The methods available are:
 - `createAuction()` has the same function signature as the `AuctionHouse` method, but does not take the `auctionCurrency` as an input, as the contract already knows what to use as it's defined in the `Splitter` at construction.
-- `setAuctionApproval()` only take approval status as an input, as the `auctionId` is already known by the contract since it created the auction 
-- `setAuctionReservePrice()` only take reserve price as an input, as the `auctionId` is already known by the contract since it created the auction 
+- `setAuctionApproval()` only takes approval status as an input, as the `auctionId` is already known by the contract since it created the auction 
+- `setAuctionReservePrice()` only takes reserve price as an input, as the `auctionId` is already known by the contract since it created the auction 
 - `cancelAuction()` takes no inputs, as the `auctionId` is already known by the contract since it created the auction 
 - `endAuction()` takes no inputs, as the `auctionId` is already known by the contract since it created the auction. After ending the auction, this method also checks the contract's own balance of `auctionCurrency` and saves it to storage as `auctionProceeds`. This amount is used by the `claim` method to compute what each user is owed.
 - `transferNft()` is used to transfer the NFT held by the splitter back to the original owner.
 
-> Determine a heuristic for the conditions required for the split contract to be able to call AuctionHouse methods (in mvp, it might make sense to allow for the split creator address to call methods that interact with AuctionHouse and punt any sort of governance down the line).
+> Requirement: Determine a heuristic for the conditions required for the split contract to be able to call AuctionHouse methods (in mvp, it might make sense to allow for the split creator address to call methods that interact with AuctionHouse and punt any sort of governance down the line).
 
 Because Merkle proofs are used to claim funds, there is no way for the contract to compute an array of the accounts used to generate the Merkle root and use that array as the foundation for access to the auction methods. 
 
 Instead, when creating a new splitter an `owner` address is passed as in input to `SplitterFactory.createSplitter()`. The Splitter's `owner` is the only address allowed to call all auction methods. This approach allows maximum flexibility over how to call these methods, as this means the `owner` can be an ordinary EOA, a multisig, or even a protocol's DAO behind a timelock. 
 
-> Once the split contract has sold an NFT on AuctionHouse, the split particpants have the ability to receive their share. This could be implement by individual claiming functions, or a single function that would divy out the split shares to all members of the split in a single transactions.
+> Requirement: Once the split contract has sold an NFT on AuctionHouse, the split particpants have the ability to receive their share. This could be implement by individual claiming functions, or a single function that would divy out the split shares to all members of the split in a single transactions.
 
 Similar to the previous requirement, because Merkle proofs are used to claim funds, there is no way for the contract to know the full array of the accounts and their percentage allocations to automatically distribute funds.
 
@@ -88,11 +88,11 @@ Once the `Splitter` is aware the auction has ended, users can claim their funds:
 
 The claim methods take an `account`, `percent`, and `merkleProof` as inputs. It verifies that those input parameters can be used generate the `merkleRoot` stored on the Splitter. Once verified, the method computes how much `account` is owed based on `percent` and `auctionProceeds` and transfers the amount to `account`.
 
-> Allow for the splits contract to split both ETH and / or ERC20 tokens.
+> Requirement: Allow for the splits contract to split both ETH and / or ERC20 tokens.
 
 When creating a new `Splitter`, you specify the `auctionCurrency` as an input. When set to the zero address, the `Splitter` knows that ETH is used as the auction current. For any other address an ERC20 token is assumed.
 
-> To simplify the scope of the contract, each split should only be used once, and for a specific auction.
+> Requirement: To simplify the scope of the contract, each split should only be used once, and for a specific auction.
 
 The `Splitter` is designed this way:
 - It can only be initialized once, which happens at deploy time
