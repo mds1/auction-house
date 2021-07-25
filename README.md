@@ -26,6 +26,8 @@ This repository is a fork of the the [Zora Auction House](https://github.com/our
 
 Anyone can deploy their own `Splitter` contract from the `SplitterFactory`. Once this contract owns an NFT, it can be used create an auction on Zora and split the auction proceeds in a predefined way, where each account has a defined percentage of the proceeds it is entitled to.
 
+A diff between this repo and the upstream auction house can be found here: https://github.com/ourzora/auction-house/compare/main...mds1:main
+
 ## Requirements
 
 The `SplitterFactory` and `Splitter` contract added to this repository satisfies each requirement from [ourzora/auction-house#5](https://github.com/ourzora/auction-house/issues/5) as follows:
