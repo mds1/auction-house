@@ -128,8 +128,7 @@ describe('Splitter', () => {
         const initialBalance = await getBalance(account, AddressEth);
         const delta = auctionProceeds.mul(percent).div(denominator)
         const proof = tree.getProof(account, percent);
-        const tx = await splitter.claim(account, percent, proof);
-        console.log('gasUsed:', (await ethers.provider.getTransactionReceipt(tx.hash)).gasUsed.toString());
+        await splitter.claim(account, percent, proof);
         expect(await getBalance(account, AddressEth)).to.equal(initialBalance.add(delta));
       }
       expect(await getBalance(splitter.address, AddressEth)).to.equal('0');
