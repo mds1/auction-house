@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.8;
+pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
@@ -18,10 +19,10 @@ contract Splitter {
   /// @notice Owner has authority to manage auctions
   address public owner;
 
-  /// @notice Address of the token used for claim payouts. This is the token received after the auction ends
-  IERC20 public token;
+  /// @notice Address of the token used for auction, which is also the token received after the auction ends
+  address public auctionCurrency;
 
-  /// @notice If `token` is this address, we are using ETH, otherwise it's an ERC20
+  /// @notice If `auctionCurrency` is this address, we are using ETH, otherwise it's an ERC20
   address constant internal ETH_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
   /// @notice Address of the Zora auction house
@@ -41,6 +42,13 @@ contract Splitter {
   /// @notice Mapping from the claim ID to the claim status
   mapping(bytes32 => bool) internal claimed;
 
+  /// @notice Used for batch claims
+  struct Claim {
+    address account;
+    uint256 percent;
+    bytes32[] merkleProof;
+  }
+
   // --- Events ---
   /// @notice Emitted on claim, where percent is the numerator, so divide by `denominator` to get the true percent
   event Claimed(address account, uint256 percent);
@@ -52,10 +60,10 @@ contract Splitter {
   }
 
   // --- Initialization for minimal proxy ---
-  function initialize(bytes32 _merkleRoot, address _token, address _owner) external {
-    require(address(token) == address(0), "Already initialized");
+  function initialize(bytes32 _merkleRoot, address _auctionCurrency, address _owner) external {
+    require(auctionCurrency == address(0), "Already initialized");
     merkleRoot = _merkleRoot;
-    token = IERC20(_token);
+    auctionCurrency = _auctionCurrency;
     owner = _owner;
   }
 
@@ -80,33 +88,55 @@ contract Splitter {
     emit Claimed(_account, _percent);
   }
 
+  function endAuctionAndBatchClaim(Claim[] calldata _claims) external {
+    endAuction();
+
+    // We re-implement the functionality of `batchClaim` because we cannot call that methods here, as this version of
+    // Solidity does not support passing a calldata array into another method: https://github.com/ethereum/solidity/issues/9160
+    for (uint256 i = 0; i < _claims.length; i += 1) {
+      claim(_claims[i].account, _claims[i].percent, _claims[i].merkleProof);
+    }
+  }
+
+  function batchClaim(Claim[] memory _claims) public {
+    for (uint256 i = 0; i < _claims.length; i += 1) {
+      claim(_claims[i].account, _claims[i].percent, _claims[i].merkleProof);
+    }
+  }
+
   // --- Auction management ---
   function createAuction(uint256 _tokenId, address _tokenContract, uint256 _duration, uint256 _reservePrice, address payable _curator, uint8 _curatorFeePercentages) external onlyOwner returns (uint256) {
-    auctionId = auctionHouse.createAuction(_tokenId, _tokenContract, _duration, _reservePrice, _curator, _curatorFeePercentages, address(token));
+    require(auctionId == 0, "An auction has already been created");
+    auctionId = auctionHouse.createAuction(_tokenId, _tokenContract, _duration, _reservePrice, _curator, _curatorFeePercentages, auctionCurrency);
     return auctionId;
   }
 
   function setAuctionApproval(bool _approved) external onlyOwner {
+    require(auctionId > 0, "An auction has not been created");
     auctionHouse.setAuctionApproval(auctionId, _approved);
   }
 
   function setAuctionReservePrice(uint256 _reservePrice) external onlyOwner {
+    require(auctionId > 0, "An auction has not been created");
     auctionHouse.setAuctionReservePrice(auctionId, _reservePrice);
   }
 
   function endAuction() public {
+    require(auctionId > 0, "An auction has not been created");
+
     // End auction, which transfers proceeds to this contract
     auctionHouse.endAuction(auctionId);
 
     // Save off that amount as the amount to split
-    if (address(token) == ETH_ADDRESS) {
+    if (auctionCurrency == ETH_ADDRESS) {
       auctionProceeds = address(this).balance;
     } else {
-      auctionProceeds = token.balanceOf(address(this));
+      auctionProceeds = IERC20(auctionCurrency).balanceOf(address(this));
     }
   }
 
   function cancelAuction() external onlyOwner {
+    require(auctionId > 0, "An auction has not been created");
     auctionHouse.cancelAuction(auctionId);
   }
 
@@ -128,8 +158,8 @@ contract Splitter {
   }
 
   function transfer(address _to, uint256 _amount) internal {
-    if (address(token) == ETH_ADDRESS) payable(_to).sendValue(_amount);
-    else token.safeTransfer(_to, _amount);
+    if (auctionCurrency == ETH_ADDRESS) payable(_to).sendValue(_amount);
+    else IERC20(auctionCurrency).safeTransfer(_to, _amount);
   }
 
   function mul(uint x, uint y) internal pure returns (uint z) {

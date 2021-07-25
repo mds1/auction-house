@@ -64,7 +64,7 @@ describe("SplitterFactory", () => {
       const expectedAddress = await splitterFactory.getSplitterAddress(merkleRoot);
       expect(tx).to.emit(splitterFactory, 'SplitterCreated').withArgs(expectedAddress, merkleRoot, AddressEth, owner.address);
       expect(await splitter.merkleRoot()).to.equal(merkleRoot);
-      expect(await splitter.token()).to.equal(AddressEth);
+      expect(await splitter.auctionCurrency()).to.equal(AddressEth);
       expect(await splitter.owner()).to.equal(owner.address);
     });
   });
@@ -83,7 +83,7 @@ describe('Splitter', () => {
   let accounts: SignerWithAddress[];
   let tree: SplitTree;
   let merkleRoot: string;
-  let allocations: {account:string; percent: BigNumberish}[];
+  let allocations: { account: string; percent: BigNumberish }[];
 
   async function fundSplitter() {
     // Used to send proceeds to the splitter contract, i.e. acts as a way to short-circuit the auction process for testing
