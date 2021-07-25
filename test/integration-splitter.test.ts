@@ -126,7 +126,7 @@ describe("splitter integration", () => {
     weth = await deployWETH();
     auction = await deploy();
 
-    allocations = [ 
+    allocations = [
       { account: deployerAddress, percent: '250000' },
       { account: creatorAddress, percent: '250000' },
       { account: ownerAddress, percent: '250000' },
@@ -134,7 +134,7 @@ describe("splitter integration", () => {
     ];
     tree = new SplitTree(allocations);
     merkleRoot = tree.getHexRoot();
-    
+
     otherNft = nfts.test;
     await mint(media.connect(creator));
     await otherNft.mint(creator.address, 0);
@@ -146,7 +146,7 @@ describe("splitter integration", () => {
 
   describe("ETH Auction with no curator", async () => {
     async function run() {
-      ({ splitter } = await deploySplitter({ merkleRoot, owner: ownerAddress, auctionHouse: auction.address })); 
+      ({ splitter } = await deploySplitter({ merkleRoot, owner: ownerAddress, auctionHouse: auction.address }));
       await media.connect(owner).transferFrom(owner.address, splitter.address, 0);
       await splitter
         .connect(owner)
@@ -222,7 +222,7 @@ describe("splitter integration", () => {
 
   describe("ETH auction with curator", () => {
     async function run() {
-      ({ splitter } = await deploySplitter({ merkleRoot, owner: ownerAddress, auctionHouse: auction.address })); 
+      ({ splitter } = await deploySplitter({ merkleRoot, owner: ownerAddress, auctionHouse: auction.address }));
       await media.connect(owner).transferFrom(owner.address, splitter.address, 0);
       await splitter
         .connect(owner)
@@ -311,12 +311,12 @@ describe("splitter integration", () => {
 
   describe("WETH Auction with no curator", () => {
     async function run() {
-      ({ splitter } = await deploySplitter({ 
+      ({ splitter } = await deploySplitter({
         merkleRoot,
         owner: ownerAddress,
         auctionHouse: auction.address,
         auctionCurrency: weth.address
-      })); 
+      }));
       await media.connect(owner).transferFrom(owner.address, splitter.address, 0);
       await splitter
         .connect(owner)
@@ -384,12 +384,12 @@ describe("splitter integration", () => {
 
   describe("WETH auction with curator", async () => {
     async function run() {
-      ({ splitter } = await deploySplitter({ 
+      ({ splitter } = await deploySplitter({
         merkleRoot,
         owner: ownerAddress,
         auctionHouse: auction.address,
         auctionCurrency: weth.address
-      })); 
+      }));
       await media.connect(owner).transferFrom(owner.address, splitter.address, 0);
       await splitter
         .connect(owner)
@@ -467,7 +467,7 @@ describe("splitter integration", () => {
 
   describe("3rd party nft auction", async () => {
     async function run() {
-      ({ splitter } = await deploySplitter({ merkleRoot, owner: ownerAddress, auctionHouse: auction.address })); 
+      ({ splitter } = await deploySplitter({ merkleRoot, owner: ownerAddress, auctionHouse: auction.address }));
       await otherNft.connect(owner).transferFrom(owner.address, splitter.address, 0);
       // await otherNft.connect(owner).approve(auction.address, 0);
       await splitter

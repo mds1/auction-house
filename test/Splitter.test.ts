@@ -79,7 +79,7 @@ describe('Splitter', () => {
     [owner, ...accounts] = await ethers.getSigners();
 
     // Get Merkle root
-    allocations = [ 
+    allocations = [
       { account: accounts[0].address, percent: '500' }, // 0.05%
       { account: accounts[1].address, percent: '10000' }, // 1%
       { account: accounts[2].address, percent: '25000' }, // 2.5%
@@ -104,7 +104,7 @@ describe('Splitter', () => {
     it('should initialize', async () => {
       expect(await splitter.merkleRoot()).to.equal(merkleRoot);
     });
-    
+
     it('should not allow re-initialization', async () => {
       await expect(splitter.initialize(merkleRoot, AddressEth, owner.address, AddressZero)).to.be.revertedWith('Already initialized');
       await expect(splitter.initialize(merkleRootOne, AddressZero, AddressZero, AddressZero)).to.be.revertedWith('Already initialized');
@@ -128,7 +128,8 @@ describe('Splitter', () => {
         const initialBalance = await getBalance(account, AddressEth);
         const delta = auctionProceeds.mul(percent).div(denominator)
         const proof = tree.getProof(account, percent);
-        await splitter.claim(account, percent, proof);
+        const tx = await splitter.claim(account, percent, proof);
+        console.log('gasUsed:', (await ethers.provider.getTransactionReceipt(tx.hash)).gasUsed.toString());
         expect(await getBalance(account, AddressEth)).to.equal(initialBalance.add(delta));
       }
       expect(await getBalance(splitter.address, AddressEth)).to.equal('0');

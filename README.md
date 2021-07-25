@@ -156,7 +156,7 @@ const log = splitterFactory.interface.parseLog(receipt.logs[0]);
 const { splitter: splitterAddress } = log.args; // this is our address
 ```
 
-5. You can create a `Splitter` contract instance pointing to `splitterAddress` to interact with it, create a new auction, etc. We'll now fast forward until the completion of an auction, after `endAuction` was called, and demonstrate how to claim funds
+5. You can create a `Splitter` contract instance pointing to `splitterAddress` to interact with it, create a new auction, etc. Make sure to transfer the NFT to the Splitter contract before creating an auction. We'll now fast forward until the completion of an auction, after `endAuction` was called, and demonstrate how to claim funds
 
 6. Generate the merkle proof for the address you want to claim funds for, then call the `claim` method. A similar process would be used for `batchClaim`. Generating this proof requires access to the original `allocations` array so you can generate the proof. We assume `splitter` is an ethers contract instance pointing to a specific `Splitter` contract.
 
