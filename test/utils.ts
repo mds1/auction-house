@@ -91,7 +91,7 @@ export const deploySplitter = async ({
   }
 
   // Deploy splitter
-  const tx = await factory.createSplitter(merkleRoot, AddressEth, owner);
+  const tx = await factory.createSplitter(merkleRoot, auctionCurrency, owner);
 
   // Parse logs for the address of the new Splitter
   const receipt = await ethers.provider.getTransactionReceipt(tx.hash);

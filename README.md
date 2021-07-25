@@ -52,18 +52,21 @@ tree = new SplitTree(allocations);
 merkleRoot = tree.getHexRoot();
 ```
 
-This allows a very large number of addresses to split allocations for a very affordable gas price. For a Splitter that uses ETH as it's `auctionCurrency`, the cost to claim your share of ETH with the `claim` method is less than 70k gas (about $2 at current prices). This is true whether the splitter is configured for 2 addresses or 100 addresses. (Costs for tokens will be a bit higher, as token transfers are more expensive than ETH transfers).
+This allows a very large number of addresses to split allocations for a very affordable gas price. For a Splitter that uses ETH as it's `auctionCurrency`, the cost to claim your share of ETH with the `claim` method is about 70k gas (about $2 at current prices). This is true whether the splitter is configured for 2 addresses or 100 addresses. (Costs for tokens will be a bit higher, as token transfers are more expensive than ETH transfers).
 
-Additionally, `Splitter` contracts are deployed as EIP-1167 minimal proxies to minimize deployment cost. The cost to deploy a new `Splitter` is 136k gas (about $4)
+Additionally, `Splitter` contracts are deployed as EIP-1167 minimal proxies to minimize deployment cost. The cost to deploy a new `Splitter` is 119k gas (about $4)
 
 > Allow for the split contract to interact with Auction House to call functions such as createAuction, setAuctionReservePrice, and cancelAuction
 
-The `Splitter` contract has various methods to allow interacting with the `AuctionHouse`. These methods have very similar function signatures to the `AuctionHouse` versions.
+The `Splitter` contract has various methods to allow interacting with the `AuctionHouse`. These methods have very similar function signatures to the `AuctionHouse` versions. Before creating an auction, the NFT to be auctioned must be transferred to the `Splitter`. This is required so the `Splitter` can grant approval to the `AuctionHouse`.
+
+The methods available are:
 - `createAuction()` has the same function signature as the `AuctionHouse` method, but does not take the `auctionCurrency` as an input, as the contract already knows what to use as it's defined in the `Splitter` at construction.
 - `setAuctionApproval()` only take approval status as an input, as the `auctionId` is already known by the contract since it created the auction 
 - `setAuctionReservePrice()` only take reserve price as an input, as the `auctionId` is already known by the contract since it created the auction 
 - `cancelAuction()` takes no inputs, as the `auctionId` is already known by the contract since it created the auction 
 - `endAuction()` takes no inputs, as the `auctionId` is already known by the contract since it created the auction. After ending the auction, this method also checks the contract's own balance of `auctionCurrency` and saves it to storage as `auctionProceeds`. This amount is used by the `claim` method to compute what each user is owed.
+- `transferNft()` is used to transfer the NFT held by the splitter back to the original owner.
 
 > Determine a heuristic for the conditions required for the split contract to be able to call AuctionHouse methods (in mvp, it might make sense to allow for the split creator address to call methods that interact with AuctionHouse and punt any sort of governance down the line).
 
@@ -75,15 +78,13 @@ Instead, when creating a new splitter an `owner` address is passed as in input t
 
 Similar to the previous requirement, because Merkle proofs are used to claim funds, there is no way for the contract to know the full array of the accounts and their percentage allocations to automatically distribute funds.
 
-Instead, eligible users must claim their funds with one of four methods. Note that all of these methods are public and can be called by anyone on behalf of a given `account`, and funds are transferred to that `account`.
+Instead, eligible users must claim their funds with one of two methods. Note that both of these methods are public and can be called by anyone on behalf of a given `account`, and funds are transferred to that `account`. 
 
-If `endAuction` has been called:
+The Splitter needs to be aware that the auction has ended. This can be done with `endAuctionOnAuctionHouse()`, which calls `AuctionHouse.endAuction()` then updates it's own state. If that has already been done by the auction house, the `Splitter`'s owner can call `endAuction()`.
+
+Once the `Splitter` is aware the auction has ended, users can claim their funds:
 - The `claim` method will claim funds for the specified account
 - The `batchClaim` method extends the `claim` method so the caller can claim funds on behalf of multiple accounts in a single transaction
-
-If `endAuction` has not been called:
-- The `endAuctionAndClaim` method is a convenience method which batches the `endAuction` and `claim` calls into a single transaction. A user can call this method to simultaneously end the auction and claim their share of the proceeds.
-- The `endAuctionAndBatchClaim` method is similar to `endAuctionAndClaim`, but allows claiming on behalf of multiple users in a single transaction
 
 The claim methods take an `account`, `percent`, and `merkleProof` as inputs. It verifies that those input parameters can be used generate the `merkleRoot` stored on the Splitter. Once verified, the method computes how much `account` is owed based on `percent` and `auctionProceeds` and transfers the amount to `account`.
 

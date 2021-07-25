@@ -122,6 +122,7 @@ describe('Splitter', () => {
       const auctionProceeds = await fundSplitter();
       const denominator = await splitter.denominator();
 
+      expect(await getBalance(splitter.address, AddressEth)).to.equal(auctionProceeds);
       for (const allocation of allocations) {
         const { account, percent } = allocation;
         const initialBalance = await getBalance(account, AddressEth);
@@ -130,6 +131,7 @@ describe('Splitter', () => {
         await splitter.claim(account, percent, proof);
         expect(await getBalance(account, AddressEth)).to.equal(initialBalance.add(delta));
       }
+      expect(await getBalance(splitter.address, AddressEth)).to.equal('0');
     });
 
     it('should reject if already claimed', async () => {

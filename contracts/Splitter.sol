@@ -70,11 +70,6 @@ contract Splitter {
   }
 
   // --- Claim funds ---
-  function endAuctionAndClaim(address _account, uint256 _percent, bytes32[] calldata _merkleProof) external {
-    endAuction();
-    claim(_account, _percent, _merkleProof);
-  }
-
   function claim(address _account, uint256 _percent, bytes32[] memory _merkleProof) public {
     // Revert if already claimed or if there is nothing to split
     require(!isClaimed(_account), "Already claimed");
@@ -88,16 +83,6 @@ contract Splitter {
     _setClaimed(_account); // reentrancy guard not required since we change claim status before transferring funds
     transfer(_account, mul(auctionProceeds, _percent) / denominator);
     emit Claimed(_account, _percent);
-  }
-
-  function endAuctionAndBatchClaim(Claim[] calldata _claims) external {
-    endAuction();
-
-    // We re-implement the functionality of `batchClaim` because we cannot call that methods here, as this version of
-    // Solidity does not support passing a calldata array into another method: https://github.com/ethereum/solidity/issues/9160
-    for (uint256 i = 0; i < _claims.length; i += 1) {
-      claim(_claims[i].account, _claims[i].percent, _claims[i].merkleProof);
-    }
   }
 
   function batchClaim(Claim[] memory _claims) public {
@@ -125,13 +110,24 @@ contract Splitter {
     auctionHouse.setAuctionReservePrice(auctionId, _reservePrice);
   }
 
-  function endAuction() public {
+  function endAuctionOnAuctionHouse() public {
     require(auctionId > 0, "An auction has not been created");
 
     // End auction, which transfers proceeds to this contract
     auctionHouse.endAuction(auctionId);
 
     // Save off that amount as the amount to split
+    _saveProceeds();
+  }
+
+  function endAuction() public onlyOwner {
+    // Use this if the auction house has already marked the auction as ended
+    require(auctionProceeds == 0, "Already ended");
+    _saveProceeds();
+  }
+
+  function _saveProceeds() internal {
+    // Save off amount to split
     if (auctionCurrency == ETH_ADDRESS) {
       auctionProceeds = address(this).balance;
     } else {
@@ -144,13 +140,12 @@ contract Splitter {
     auctionHouse.cancelAuction(auctionId);
   }
 
-  receive() external payable {
-    // For receiving ETH after auctions
-  }
-
-  // --- NFT management ---
   function transferNft(address _to, uint256 _tokenId, address _tokenContract) external onlyOwner {
     IERC721(_tokenContract).transferFrom(address(this), _to, _tokenId);
+  }
+
+  receive() external payable {
+    // For receiving ETH after auctions
   }
 
   // --- Claim heplers ---
