@@ -54,7 +54,7 @@ tree = new SplitTree(allocations);
 merkleRoot = tree.getHexRoot();
 ```
 
-This allows a very large number of addresses to split allocations for a very affordable gas price. For a Splitter that uses ETH as it's `auctionCurrency`, the cost to claim your share of ETH with the `claim` method is about 70k gas (about $2 at current prices). This holds whether the splitter is configured for 2 addresses or 100 addresses. Costs for tokens will be a bit higher, as token transfers are more expensive than ETH transfers.
+This allows a very large number of addresses to split allocations for a very affordable gas price. For a Splitter that uses ETH as it's `auctionCurrency`, the cost to claim your share of ETH with the `claim` method is about 70k gas (about $2 at current prices). This holds whether the splitter is configured for 2 addresses or 100 addresses. Costs for tokens will be a bit higher, as token transfers are more expensive than ETH transfers. We can also easily reduce the cost of a claim by ~15k gas for 255 out of every 256 users by switching the `claimed` variable from a mapping to a bitmap, which wasn't done here just for the sake of trying out a mapping in a hackathon.
 
 Additionally, `Splitter` contracts are deployed as EIP-1167 minimal proxies to minimize deployment cost. The cost to deploy a new `Splitter` is ~119k gas (about $4)
 
